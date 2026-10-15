@@ -1,5 +1,11 @@
 import { defineConfig } from 'vitest/config';
+import { fileURLToPath } from 'node:url';
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@basta/shared': fileURLToPath(new URL('./packages/shared/dist/index.js', import.meta.url)),
+    },
+  },
   test: {
     include: [
       'packages/**/*.test.ts',

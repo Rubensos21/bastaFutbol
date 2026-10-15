@@ -9,7 +9,7 @@ import { requireRule } from '../game/errors.js';
 export class ReviewService {
   structural(state: RoomState, round: RoundState) {
     const preview = scoreRound(
-      round.entries.map((e) => ({ ...e, verdict: 'VALID' as const })),
+      round.entries.map((e) => ({ ...e, verdict: 'VALID' as const, hostPoints: undefined })),
       state.categories,
       round.letter!,
       round.annulled,
@@ -53,7 +53,7 @@ export class ReviewService {
         startsWithLetter(entry.text, round.letter!) &&
         !round.annulled.includes(entry.categoryId) &&
         scoreRound(
-          round.entries.map((e) => ({ ...e, verdict: 'VALID' as const })),
+          round.entries.map((e) => ({ ...e, verdict: 'VALID' as const, hostPoints: undefined })),
           state.categories,
           round.letter!,
           round.annulled,
@@ -63,8 +63,11 @@ export class ReviewService {
     );
   }
   refreshStructural(state: RoomState, round: RoundState) {
+    // Simular con verdict=VALID y sin hostPoints para detectar exclusivamente errores estructurales
+    // (vacío, inicial incorrecta, repetición propia, categoría anulada), sin que los valores
+    // de adjudicación del anfitrión interfieran en el cálculo de colisiones estructurales.
     const scores = scoreRound(
-      round.entries.map((e) => ({ ...e, verdict: 'VALID' as const })),
+      round.entries.map((e) => ({ ...e, verdict: 'VALID' as const, hostPoints: undefined })),
       state.categories,
       round.letter!,
       round.annulled,
@@ -72,16 +75,25 @@ export class ReviewService {
     for (const e of round.entries) {
       const derived = scores.find((s) => s.id === e.id)!;
       if (derived.points === 0) {
+        // La entrada tiene un error estructural: siempre vale 0 sin importar hostPoints.
+        // Limpiamos hostPoints porque ya no puede aplicar a una entrada estructuralmente inválida.
         e.verdict = 'INVALID';
-        e.reason = derived.scoreReason;
+        // Preservar el motivo explícito del host si ya adjudicó esta entrada.
+        if (!e.resolvedBy) e.reason = derived.scoreReason;
+        e.hostPoints = undefined;
       } else if (
         ['Repetido por ti', 'Anulado', 'No comienza con la letra', 'Vacío'].includes(e.reason)
       ) {
+        // Era un error estructural pero ahora es válida (p.ej. alias corregido).
+        // Pasa a revisión humana; si el host ya había adjudicado, se preserva hostPoints.
         e.verdict = 'PENDING';
         e.reason = 'Requiere nueva revisión tras corrección de alias';
         e.resolvedBy = null;
         e.votes = [];
+        // hostPoints se conserva si ya existía — el host no necesita re-adjudicar.
       }
+      // Si la entrada no tenía error estructural y ya estaba resuelta (resolvedBy != null),
+      // no tocamos verdict ni hostPoints: el host ya tomó una decisión explícita.
     }
   }
   closeVotes(round: RoundState) {

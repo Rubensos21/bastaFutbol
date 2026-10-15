@@ -9,6 +9,9 @@ const game = useGameStore(),
   form = ref(window.matchMedia('(max-width: 700px)').matches);
 const canEdit = computed(() => game.editable && clock.seconds.value > 0);
 const answering = computed(() => room.value.phase === 'ANSWERING');
+const reviewing = computed(
+  () => room.value.phase === 'REVIEW' || room.value.phase === 'SCORING',
+);
 const complete = computed(
   () => room.value.categories.filter((c) => game.texts[c.id]?.trim()).length,
 );
@@ -52,18 +55,38 @@ function cellStatus(playerId: string, categoryId: string) {
   if ('points' in e && e.points === 10) return 'Duplicada';
   return verdictLabel[e.verdict];
 }
+function canAward(playerId: string, categoryId: string) {
+  if (!game.isHost || !reviewing.value) return false;
+  const e = entry(playerId, categoryId);
+  if (!e || !e.text.trim()) return false;
+  return true;
+}
+const awardReasons = ref<Record<string, string>>({});
+function award(answerId: string, pts: 0 | 10 | 20) {
+  const reason =
+    awardReasons.value[answerId]?.trim() ||
+    (pts === 20 ? 'Válida y única' : pts === 10 ? 'Válida y duplicada' : 'Inválida');
+  game.action('review:award', { answerId, points: pts, reason });
+}
 const verdictLabel: Record<string, string> = {
   PENDING: 'Pendiente',
   VALID: 'Válida',
   INVALID: 'Inválida',
   DISPUTED: 'Impugnada',
 };
+const podium = computed(() => room.value.ranking?.slice(0, 5) ?? []);
+function medal(rank: number) {
+  if (rank === 1) return '🥇';
+  if (rank === 2) return '🥈';
+  if (rank === 3) return '🥉';
+  return `#${rank}`;
+}
 </script>
 <template>
   <section class="board-section">
     <div class="section-heading board-heading">
       <div>
-        <p class="eyebrow">{{ answering ? 'TU CONOCIMIENTO EN JUEGO' : 'RESPUESTAS REVELADAS' }}</p>
+        <p class="eyebrow">{{ answering ? 'TU CONOCIMIENTO EN JUEGO' : 'EL VAR DE LAS PALABRAS' }}</p>
         <h1>{{ answering ? 'Que hable tu fútbol.' : 'Revisemos la jugada.' }}</h1>
       </div>
       <div class="board-meta">
@@ -167,13 +190,40 @@ const verdictLabel: Record<string, string> = {
                   >{{ cellStatus(member.id, cat.id) }}</span
                 ><small v-if="points(member.id, cat.id) !== null"
                   >+{{ points(member.id, cat.id) }}</small
-                ></template
+                >
+                <div v-if="canAward(member.id, cat.id)" class="award-buttons">
+                  <button
+                    class="award-btn"
+                    :class="{ active: points(member.id, cat.id) === 0 }"
+                    :disabled="game.busy"
+                    @click="award(entry(member.id, cat.id)!.id, 0)"
+                  >
+                    0
+                  </button>
+                  <button
+                    class="award-btn"
+                    :class="{ active: points(member.id, cat.id) === 10 }"
+                    :disabled="game.busy"
+                    @click="award(entry(member.id, cat.id)!.id, 10)"
+                  >
+                    10
+                  </button>
+                  <button
+                    class="award-btn"
+                    :class="{ active: points(member.id, cat.id) === 20 }"
+                    :disabled="game.busy"
+                    @click="award(entry(member.id, cat.id)!.id, 20)"
+                  >
+                    20
+                  </button>
+                </div></template
               >
             </td>
           </tr>
         </tbody>
       </table>
-    </div>
+    </div> 
+    <!--Aqui-->
     <div v-for="catId in game.conflicts" :key="catId" class="banner">
       <div>
         <strong>Conflicto en {{ room.categories.find((c) => c.id === catId)?.label }}</strong>
@@ -189,6 +239,20 @@ const verdictLabel: Record<string, string> = {
         </button>
       </div>
     </div>
+    
+    <div v-if="reviewing && game.isHost" class="publish-footer">
+        <button
+          class="primary"
+          :disabled="game.busy || !room.writable"
+          @click="game.action('review:finish')"
+        >
+          Publicar puntos →
+        </button>
+    </div>
+    <p v-else-if="reviewing" class="mutedsmallpublish-waiting">
+      El anfitrión publicará el marcador.
+    </p>
+    
     <div v-if="answering" class="answering-footer">
       <p class="muted">
         <strong>Tus respuestas son privadas.</strong> No repitas personas, clubes o selecciones en
@@ -217,6 +281,31 @@ const verdictLabel: Record<string, string> = {
       <p v-else class="small muted">
         Terminé bloquea tu fila. BASTA deja hasta 10 segundos a todos.
       </p>
+    </div>
+    <div v-else-if="reviewing" class="podium-footer">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">PODIO EN VIVO</p>
+          <h2>Ranking actualizado en tiempo real</h2>
+        </div>
+        <span class="muted small">{{ game.isHost ? 'Asigna puntos con los botones 0/10/20' : 'Esperando adjudicación del anfitrión' }}</span>
+      </div>
+      <ol class="podium-list">
+        <li
+          v-for="rank in podium"
+          :key="rank.participantId"
+          :class="{ own: rank.participantId === room.meId }"
+        >
+          <span class="podium-medal">{{ medal(rank.rank ?? 0) }}</span>
+          <span class="podium-name">{{
+            room.members.find((m) => m.id === rank.participantId)?.nickname ?? '—'
+          }}</span>
+          <span class="podium-total">{{ rank.total }} pts</span>
+          <span class="podium-detail muted small"
+            >{{ rank.uniqueCount }} únicas · {{ rank.validCount }} válidas</span
+          >
+        </li>
+      </ol>
     </div>
   </section>
 </template>

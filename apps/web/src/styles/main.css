@@ -1920,3 +1920,203 @@ strong {
     opacity: 0.35;
   }
 }
+
+/* ─── Botones de adjudicación 0 / 10 / 20 (host en tabla matrix) ─────────── */
+
+.award-buttons {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.award-btn {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  min-height: 28px;
+  min-width: 32px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface-alt);
+  color: var(--muted);
+  letter-spacing: 0.03em;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    color 0.15s;
+  line-height: 1;
+}
+
+.award-btn:hover:not(:disabled) {
+  border-color: var(--green);
+  color: var(--green);
+  background: var(--green-tint);
+}
+
+/* Estado activo: valor ya adjudicado */
+.award-btn.active {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+  color: var(--accent);
+}
+
+/* El botón "0" activo usa danger */
+.award-btn:first-child.active {
+  border-color: var(--danger);
+  background: rgb(245 169 156 / 10%);
+  color: var(--danger);
+}
+
+/* ─── Podio en vivo (sección inferior del tablero durante REVIEW/SCORING) ─── */
+
+.podium-footer {
+  margin-top: 32px;
+  padding-top: 28px;
+  border-top: 1px solid var(--border);
+}
+
+.publish-footer {
+  margin-top: 24px;
+  margin-bottom: 24px;
+}
+
+.mutedsmallpublish-waiting {
+  font-size: 16px;
+  margin-top: 32px;
+}
+
+.publish-waiting {
+  margin-bottom: 24px;
+}
+
+.podium-footer .section-heading {
+  margin-bottom: 20px;
+}
+
+.podium-footer .section-heading h2 {
+  font-size: 28px;
+  margin-top: 8px;
+}
+
+.podium-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.podium-list li {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  grid-template-rows: auto auto;
+  column-gap: 16px;
+  row-gap: 2px;
+  align-items: center;
+  padding: 14px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  transition: border-color 0.15s;
+}
+
+/* Destacar la entrada del jugador actual */
+.podium-list li.own {
+  background: var(--accent-tint);
+  border-color: rgb(216 231 106 / 30%);
+  box-shadow: inset 3px 0 var(--accent);
+}
+
+/* El primer puesto con borde acento */
+.podium-list li:first-child {
+  border-color: rgb(216 231 106 / 25%);
+  background: var(--surface-alt);
+}
+
+.podium-medal {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--muted);
+  text-align: center;
+  grid-row: 1 / 3;
+  align-self: center;
+}
+
+/* Medallas posicionales */
+.podium-list li:nth-child(1) .podium-medal {
+  font-size: 22px; /* emoji medal, tamaño controlado */
+}
+.podium-list li:nth-child(2) .podium-medal {
+  font-size: 22px;
+}
+.podium-list li:nth-child(3) .podium-medal {
+  font-size: 22px;
+}
+
+.podium-name {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.podium-total {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 1;
+  text-align: right;
+  grid-column: 3;
+  grid-row: 1 / 3;
+  align-self: center;
+  white-space: nowrap;
+}
+
+.podium-detail {
+  grid-column: 2;
+  grid-row: 2;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+/* Responsive: compactar en móvil */
+@media (max-width: 700px) {
+  .award-btn {
+    font-size: 13px;
+    min-width: 28px;
+    min-height: 24px;
+    padding: 3px 5px;
+  }
+
+  .podium-footer .section-heading h2 {
+    font-size: 24px;
+  }
+
+  .podium-list li {
+    grid-template-columns: 38px 1fr auto;
+    column-gap: 12px;
+    padding: 12px 14px;
+  }
+
+  .podium-name {
+    font-size: 18px;
+  }
+
+  .podium-total {
+    font-size: 26px;
+  }
+
+  .podium-medal {
+    font-size: 20px;
+  }
+}

@@ -298,6 +298,7 @@ export class GameEngine {
         e.votes = e.votes.filter((v) => v.voterId !== m.id);
         e.votes.push({ voterId: m.id, valid: c.valid, reason: c.reason });
         this.review.tally(e);
+        this.scoring.recalculate(s, r!);
         break;
       }
       case 'review:appeal': {
@@ -308,6 +309,7 @@ export class GameEngine {
         e.verdict = 'DISPUTED';
         e.reason = c.reason;
         e.evidence = c.evidence ?? null;
+        this.scoring.recalculate(s, r!);
         break;
       }
       case 'review:resolve': {
@@ -323,31 +325,23 @@ export class GameEngine {
         e.canonical = c.canonical ?? e.canonical;
         e.appealed = false;
         e.resolvedBy = m.id;
+        this.scoring.recalculate(s, r!);
         break;
       }
       case 'review:award': {
         const e = entry();
-        requireRule(
-          this.review.moderator(s, e) === m.id,
-          'MODERATOR_ONLY',
-          'La adjudicación requiere un moderador distinto del autor.',
-        );
+        this.host(s, m);
+        // Adjudicar > 0 puntos a una entrada estructuralmente inválida (vacía, inicial incorrecta,
+        // repetida o anulada) no tiene sentido: esos casos siempre valen 0. Sí se permite adjudicar
+        // 0 explícitamente para rechazar cualquier entrada con motivo escrito.
+        if (c.points > 0) this.review.votable(s, e, r!);
         const verdict = c.points === 0 ? ('INVALID' as const) : ('VALID' as const);
-        const expected = scoreRound(
-          r!.entries.map((v) => (v.id === e.id ? { ...v, verdict } : v)),
-          s.categories,
-          r!.letter!,
-          r!.annulled,
-        ).find((v) => v.id === e.id)!;
-        requireRule(
-          expected.points === c.points,
-          'SCORE_RULE_MISMATCH',
-          `Según las reglas esta respuesta corresponde a ${expected.points} puntos: ${expected.scoreReason}.`,
-        );
         e.verdict = verdict;
         e.reason = c.reason;
         e.resolvedBy = m.id;
         e.appealed = false;
+        e.hostPoints = c.points;
+        this.scoring.recalculate(s, r!);
         break;
       }
       case 'review:annul-propose':
@@ -466,8 +460,10 @@ export class GameEngine {
       default:
         requireRule(false, 'INVALID_COMMAND', 'Acción no disponible.');
     }
-    if (s.phase === 'REVIEW' && ['review:resolve', 'review:award'].includes(c.type))
+    if (s.phase === 'REVIEW' && ['review:resolve', 'review:award'].includes(c.type)) {
       this.review.refreshStructural(s, r!);
+      this.scoring.recalculate(s, r!);
+    }
     if (s.phase === 'LOBBY') s.expiresAt = now + Number(process.env.ROOM_TTL_HOURS ?? 24) * 3600000;
     this.rounds.audit(
       s,

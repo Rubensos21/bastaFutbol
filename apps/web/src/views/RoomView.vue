@@ -6,7 +6,6 @@ import { useGameStore } from '../stores/game';
 import Lobby from '../components/lobby/Lobby.vue';
 import GameBoard from '../components/board/GameBoard.vue';
 import LetterDraw from '../components/draw/LetterDraw.vue';
-import ReviewPanel from '../components/review/ReviewPanel.vue';
 import Results from '../components/results/Results.vue';
 import GameBar from '../components/common/GameBar.vue';
 const route = useRoute(),
@@ -126,7 +125,7 @@ async function leave() {
       "
     /><template
       v-else-if="['ANSWERING', 'ANSWERS_LOCKED', 'REVIEW', 'SCORING'].includes(room.phase)"
-      ><GameBoard /><ReviewPanel v-if="room.phase === 'REVIEW'" /></template
+      ><GameBoard /></template
     ><Results v-else @leave="leave" />
     <div v-if="room.pausedAt" class="pause-banner" role="status">
       PARTIDA PAUSADA

@@ -616,37 +616,64 @@ export const cases: [string, () => void][] = [
   ],
 
   [
-    'adjudicación explícita verifica 0/10/20 y rechaza puntuaciones incompatibles',
+    'adjudicación explícita: el anfitrión manda — hostPoints sobreescribe el cálculo algorítmico',
     () => {
       const f = fixture(2);
       f.s.categories = [
         CATEGORIES.find((c) => c.id === 'player')!,
-        ...f.s.categories.filter((c) => c.id !== 'player').slice(0, 6),
+        CATEGORIES.find((c) => c.id === 'legend')!,
+        ...f.s.categories.filter((c) => !['player', 'legend'].includes(c.id)).slice(0, 5),
       ];
       f.rounds.start(f.s, 2000);
       const r = f.s.rounds[0]!;
       r.letter = 'M';
-      const e = r.entries.find(
+
+      // Jugador 1 escribe 'Messi' en 'player' — respuesta única (algorítmicamente 20 pts).
+      const ePlayer = r.entries.find(
         (e) => e.participantId === f.s.members[1]!.id && e.categoryId === 'player',
       )!;
-      e.text = 'Messi';
+      ePlayer.text = 'Messi';
+
+      // Jugador 0 y jugador 1 escriben 'Maradona' en 'legend' → duplicadas (alg. 10 pts c/u).
+      // Usamos 'Maradona' para que jugador 1 no tenga self-repeat con 'Messi' en 'player'.
+      const eLegend0 = r.entries.find(
+        (e) => e.participantId === f.s.members[0]!.id && e.categoryId === 'legend',
+      )!;
+      const eLegend1 = r.entries.find(
+        (e) => e.participantId === f.s.members[1]!.id && e.categoryId === 'legend',
+      )!;
+      eLegend0.text = 'Maradona';
+      eLegend1.text = 'Maradona';
+
       f.rounds.lock(f.s, 3000);
-      assert.throws(
-        () =>
-          apply(f, 'review:award', { answerId: e.id, points: 10, reason: 'Quiero diez' }, 0, 3001),
-        /20 puntos/,
-      );
-      assert.equal(e.verdict, 'PENDING');
-      apply(
-        f,
-        'review:award',
-        { answerId: e.id, points: 20, reason: 'Respuesta única y válida' },
-        0,
-        3002,
-      );
-      assert.equal(e.verdict, 'VALID');
-      apply(f, 'review:finish', {}, 0, 3003);
-      assert.equal(r.scores.find((p) => p.participantId === e.participantId)!.total, 20);
+
+      // Caso A: host adjudica 10 a una respuesta única (alg. daría 20) → debe quedar 10.
+      apply(f, 'review:award', { answerId: ePlayer.id, points: 10, reason: 'Quiero diez' }, 0, 3001);
+      assert.equal(ePlayer.verdict, 'VALID');
+      assert.equal(ePlayer.hostPoints, 10);
+      const snapA = scoreRound(r.entries, f.s.categories, r.letter!, r.annulled);
+      assert.equal(snapA.find((e) => e.id === ePlayer.id)!.points, 10);
+      assert.equal(snapA.find((e) => e.id === ePlayer.id)!.scoreReason, 'Adjudicado 10 puntos por el anfitrión');
+
+      // Caso B: host adjudica 20 a una respuesta duplicada (alg. daría 10) → debe quedar 20.
+      apply(f, 'review:award', { answerId: eLegend1.id, points: 20, reason: 'Le doy 20' }, 0, 3002);
+      assert.equal(eLegend1.hostPoints, 20);
+      const snapB = scoreRound(r.entries, f.s.categories, r.letter!, r.annulled);
+      assert.equal(snapB.find((e) => e.id === eLegend1.id)!.points, 20);
+      assert.equal(snapB.find((e) => e.id === eLegend1.id)!.scoreReason, 'Adjudicado 20 puntos por el anfitrión');
+
+      // Caso C: host adjudica 0 a una respuesta válida (eLegend0) → queda en 0.
+      // points: 0 no llama votable(), se acepta siempre.
+      apply(f, 'review:award', { answerId: eLegend0.id, points: 0, reason: 'Inválida para mí' }, 0, 3003);
+      assert.equal(eLegend0.verdict, 'INVALID');
+      assert.equal(eLegend0.hostPoints, 0);
+      const snapC = scoreRound(r.entries, f.s.categories, r.letter!, r.annulled);
+      assert.equal(snapC.find((e) => e.id === eLegend0.id)!.points, 0);
+
+      // Publicar y comprobar totales finales acumulados.
+      apply(f, 'review:finish', {}, 0, 3004);
+      // Jugador 1: player=10 (host forzó 10) + legend=20 (host forzó 20) = 30 pts.
+      assert.equal(r.scores.find((p) => p.participantId === f.s.members[1]!.id)!.total, 30);
     },
   ],
   [
@@ -685,6 +712,81 @@ export const cases: [string, () => void][] = [
       );
       assert.equal(second.verdict, 'PENDING');
       assert.equal(second.reason, 'Requiere nueva revisión tras corrección de alias');
+    },
+  ],
+  [
+    'review:award rechaza adjudicar >0 puntos a entradas estructuralmente inválidas',
+    () => {
+      const f = fixture(2);
+      f.s.categories = [
+        CATEGORIES.find((c) => c.id === 'player')!,
+        ...f.s.categories.filter((c) => c.id !== 'player').slice(0, 6),
+      ];
+      f.rounds.start(f.s, 2000);
+      const r = f.s.rounds[0]!;
+      r.letter = 'M';
+      // Entrada vacía: no pone texto.
+      const empty = r.entries.find(
+        (e) => e.participantId === f.s.members[1]!.id && e.categoryId === 'player',
+      )!;
+      f.rounds.lock(f.s, 3000);
+      assert.equal(empty.reason, 'Vacío');
+
+      // Adjudicar 20 a entrada vacía → debe lanzar error estructural.
+      assert.throws(
+        () => apply(f, 'review:award', { answerId: empty.id, points: 20, reason: 'Le doy veinte' }, 0, 3001),
+        /STRUCTURAL_INVALID|entrada vacía|inicial incorrecta|vale 0/i,
+      );
+      assert.equal(empty.verdict, 'INVALID'); // no cambió
+      assert.equal(empty.hostPoints, undefined); // no se guardó
+
+      // Adjudicar 0 a entrada vacía → debe aceptarse (el host puede rechazar explícitamente con motivo).
+      // hostPoints no se preserva en entradas estructuralmente inválidas (refreshStructural lo limpia),
+      // pero el efecto de 0 puntos está garantizado estructuralmente.
+      apply(f, 'review:award', { answerId: empty.id, points: 0, reason: 'Está vacía, inválida' }, 0, 3002);
+      assert.equal(empty.verdict, 'INVALID');
+      assert.equal(empty.reason, 'Está vacía, inválida'); // motivo del host se preserva
+      const scored = scoreRound(r.entries, f.s.categories, r.letter!, r.annulled);
+      assert.equal(scored.find((e) => e.id === empty.id)!.points, 0); // sigue valiendo 0
+    },
+  ],
+  [
+    'refreshStructural limpia hostPoints si la entrada pasa a error estructural, lo conserva si sigue válida',
+    () => {
+      const f = fixture(2);
+      f.s.categories = [
+        CATEGORIES.find((c) => c.id === 'player')!,
+        CATEGORIES.find((c) => c.id === 'legend')!,
+        ...f.s.categories.filter((c) => !['player', 'legend'].includes(c.id)).slice(0, 5),
+      ];
+      f.rounds.start(f.s, 2000);
+      const r = f.s.rounds[0]!;
+      r.letter = 'M';
+
+      // Jugador 1 escribe 'Messi' en 'player' y 'Messi2' en 'legend'.
+      const ePlayer = r.entries.find(
+        (e) => e.participantId === f.s.members[1]!.id && e.categoryId === 'player',
+      )!;
+      const eLegend = r.entries.find(
+        (e) => e.participantId === f.s.members[1]!.id && e.categoryId === 'legend',
+      )!;
+      ePlayer.text = 'Messi';
+      eLegend.text = 'Messi2';
+      f.rounds.lock(f.s, 3000);
+
+      // Host adjudica 10 a 'Messi' (válida única → normalmente 20, forzamos 10).
+      apply(f, 'review:award', { answerId: ePlayer.id, points: 10, reason: 'Solo merece 10' }, 0, 3001);
+      assert.equal(ePlayer.hostPoints, 10);
+
+      // Llamar refreshStructural: 'Messi' sigue siendo estructuralmente válida → hostPoints se conserva.
+      f.review.refreshStructural(f.s, r);
+      assert.equal(ePlayer.hostPoints, 10, 'hostPoints debe conservarse si la entrada sigue válida');
+
+      // Simular que la entrada pasa a ser estructuralmente inválida (p.ej. anulación de categoría).
+      r.annulled.push('player');
+      f.review.refreshStructural(f.s, r);
+      assert.equal(ePlayer.hostPoints, undefined, 'hostPoints debe limpiarse si la entrada pasa a error estructural');
+      assert.equal(ePlayer.verdict, 'INVALID');
     },
   ],
   [
@@ -747,6 +849,103 @@ export const cases: [string, () => void][] = [
       const view = project(f.s, f.s.members[1]!.id, true);
       assert.equal(view.ranking[0]!.participantId, f.s.members[0]!.id);
       assert.equal(view.members.find((m) => m.id === f.s.members[0]!.id)?.left, true);
+    },
+  ],
+  [
+    'solo el anfitrión puede adjudicar puntos — jugadores no-host reciben HOST_ONLY',
+    () => {
+      const f = fixture(3);
+      f.s.categories = [
+        CATEGORIES.find((c) => c.id === 'player')!,
+        ...f.s.categories.filter((c) => c.id !== 'player').slice(0, 6),
+      ];
+      f.rounds.start(f.s, 2000);
+      const r = f.s.rounds[0]!;
+      r.letter = 'M';
+      // Jugador 2 (índice 2) escribe una respuesta válida.
+      const e = r.entries.find(
+        (e) => e.participantId === f.s.members[2]!.id && e.categoryId === 'player',
+      )!;
+      e.text = 'Messi';
+      f.rounds.lock(f.s, 3000);
+
+      // Jugador 1 (no-host) intenta adjudicar → debe fallar con HOST_ONLY.
+      assert.throws(
+        () => apply(f, 'review:award', { answerId: e.id, points: 20, reason: 'Válida' }, 1, 3001),
+        /HOST_ONLY|anfitrión/i,
+      );
+      assert.equal(e.hostPoints, undefined); // no se guardó
+      assert.equal(e.verdict, 'PENDING'); // no cambió
+
+      // El propio jugador calificado (jugador 2) intenta adjudicarse sus propios puntos → HOST_ONLY.
+      assert.throws(
+        () => apply(f, 'review:award', { answerId: e.id, points: 20, reason: 'Me los doy yo' }, 2, 3002),
+        /HOST_ONLY|anfitrión/i,
+      );
+      assert.equal(e.verdict, 'PENDING'); // sigue sin cambiar
+
+      // El anfitrión (jugador 0) sí puede adjudicar → éxito.
+      apply(f, 'review:award', { answerId: e.id, points: 20, reason: 'Válida y única' }, 0, 3003);
+      assert.equal(e.verdict, 'VALID');
+      assert.equal(e.hostPoints, 20);
+    },
+  ],
+  [
+    'adjudicación funciona en todas las categorías del tablero — no solo la primera',
+    () => {
+      // Usa las 7 categorías del juego estándar fijadas explícitamente.
+      const catIds = ['player', 'coach', 'club', 'world_cup_country', 'legend', 'best_coach', 'best_prime'];
+      const f = fixture(2);
+      const cats = catIds.map((id) => CATEGORIES.find((c) => c.id === id)!);
+      f.s.categories = cats;
+      f.rounds.start(f.s, 2000);
+      const r = f.s.rounds[0]!;
+      r.letter = 'M';
+
+      // Jugador 1 responde en categoría 4 (world_cup_country, índice 3) y 7 (best_prime, índice 6).
+      const cat4Id = catIds[3]!; // 'world_cup_country'
+      const cat7Id = catIds[6]!; // 'best_prime'
+
+      const e4 = r.entries.find(
+        (e) => e.participantId === f.s.members[1]!.id && e.categoryId === cat4Id,
+      )!;
+      const e7 = r.entries.find(
+        (e) => e.participantId === f.s.members[1]!.id && e.categoryId === cat7Id,
+      )!;
+      e4.text = 'México';   // válida, comienza con M
+      e7.text = 'Messi';    // válida, comienza con M
+
+      f.rounds.lock(f.s, 3000);
+      assert.equal(e4.verdict, 'PENDING');
+      assert.equal(e7.verdict, 'PENDING');
+
+      // Host adjudica 10 en categoría 4 (normalmente 20 por ser única → debe quedar 10).
+      apply(f, 'review:award', { answerId: e4.id, points: 10, reason: 'Vale solo 10' }, 0, 3001);
+      assert.equal(e4.hostPoints, 10);
+      assert.equal(e4.verdict, 'VALID');
+
+      // Host adjudica 20 en categoría 7 (correcto, queda 20).
+      apply(f, 'review:award', { answerId: e7.id, points: 20, reason: 'Válida y única' }, 0, 3002);
+      assert.equal(e7.hostPoints, 20);
+      assert.equal(e7.verdict, 'VALID');
+
+      // Verificar scoredEntries tras recalculate (que engine llamó internamente).
+      const scored4 = r.scoredEntries.find((e) => e.id === e4.id)!;
+      const scored7 = r.scoredEntries.find((e) => e.id === e7.id)!;
+      assert.equal(scored4.points, 10, 'categoría 4: host forzó 10, debe ser 10');
+      assert.equal(scored7.points, 20, 'categoría 7: host adjudicó 20, debe ser 20');
+
+      // Publicar y verificar totales: jugador 1 tiene 10 + 20 = 30 pts.
+      apply(f, 'review:finish', {}, 0, 3003);
+      assert.equal(
+        r.scores.find((p) => p.participantId === f.s.members[1]!.id)!.total,
+        30,
+        'total debe ser 30 (10 en cat4 + 20 en cat7)',
+      );
+
+      // Verificar que hostPoints está en scoredEntries después de publicar.
+      assert.equal(r.scoredEntries.find((e) => e.id === e4.id)!.hostPoints, 10);
+      assert.equal(r.scoredEntries.find((e) => e.id === e7.id)!.hostPoints, 20);
     },
   ],
 ];

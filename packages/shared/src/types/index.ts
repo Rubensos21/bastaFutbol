@@ -45,6 +45,10 @@ export interface Entry {
   appealed: boolean;
   resolvedBy: string | null;
   evidence: string | null;
+  /** Puntos forzados explícitamente por el anfitrión vía review:award. Cuando está definido
+   *  y la entrada no tiene error estructural, scoreRound usa este valor en lugar de calcular
+   *  por duplicados (0 = inválida, 10 = forzado duplicada, 20 = forzado única). */
+  hostPoints?: 0 | 10 | 20;
 }
 export interface ScoredEntry extends Entry {
   points: 0 | 10 | 20;

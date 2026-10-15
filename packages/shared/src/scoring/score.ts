@@ -44,6 +44,21 @@ export function scoreRound(
         item.scoreReason = 'Válida y duplicada';
       }
     }
+  // Aplicar adjudicación explícita del anfitrión: sobreescribe el cálculo algorítmico
+  // SOLO en entradas sin error estructural (vacío, inicial, repetido, anulado).
+  // Los errores estructurales siempre valen 0 independientemente de hostPoints.
+  for (const item of scored) {
+    const structuralErrors = ['Vacío', 'No comienza con la letra', 'Repetido por ti', 'Anulado'];
+    if (item.hostPoints !== undefined && !structuralErrors.includes(item.scoreReason)) {
+      item.points = item.hostPoints;
+      item.scoreReason =
+        item.hostPoints === 0
+          ? 'Adjudicado inválido por el anfitrión'
+          : item.hostPoints === 10
+            ? 'Adjudicado 10 puntos por el anfitrión'
+            : 'Adjudicado 20 puntos por el anfitrión';
+    }
+  }
   return scored;
 }
 export function roundTotals(scored: ScoredEntry[], ids: string[]): PlayerScore[] {
