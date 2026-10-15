@@ -1,0 +1,198 @@
+generator client {
+  provider = "prisma-client"
+  output = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+datasource db {
+  provider = "postgresql"
+}
+model GuestIdentity {
+  id String @id @default(uuid()) @db.Uuid
+  sessionHash String @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  participants Participant[]
+  mutations Mutation[]
+}
+model Room {
+  id String @id @db.Uuid
+  code String @unique
+  hostParticipantId String @db.Uuid
+  phase String
+  revision Int @default(0)
+  capacity Int?
+  expiresAt DateTime
+  state Json
+  creationKey String @unique
+  participants Participant[]
+  host Participant @relation("Host",fields:[hostParticipantId],references:[id],onDelete:NoAction)
+  reservations ReservedSlot[]
+  games Game[]
+  events AuditEvent[]
+  mutations Mutation[]
+  @@index([expiresAt])
+}
+model Participant {
+  id String @id @db.Uuid
+  roomId String @db.Uuid
+  guestIdentityId String @db.Uuid
+  nickname String
+  normalizedNickname String
+  slotNumber Int
+  isReady Boolean @default(false)
+  isConnected Boolean @default(false)
+  joinedAt DateTime
+  lastSeenAt DateTime
+  leftAt DateTime?
+  room Room @relation(fields:[roomId], references:[id], onDelete:Cascade)
+  guest GuestIdentity @relation(fields:[guestIdentityId], references:[id])
+  answers Answer[]
+  votes AnswerVote[]
+  scores RoundScore[]
+  hostedRooms Room[] @relation("Host")
+  selectedRounds Round[] @relation("Picker")
+  claims ReservedSlot[] @relation("Claimant")
+  judgments AnswerJudgment[] @relation("Resolver")
+  auditEvents AuditEvent[] @relation("Actor")
+  @@unique([roomId,guestIdentityId])
+  @@index([roomId])
+}
+model ReservedSlot {
+  id String @id @default(uuid()) @db.Uuid
+  roomId String @db.Uuid
+  slotNumber Int
+  preferredName String
+  claimantId String? @db.Uuid
+  approved Boolean @default(false)
+  room Room @relation(fields:[roomId],references:[id],onDelete:Cascade)
+  claimant Participant? @relation("Claimant",fields:[claimantId],references:[id],onDelete:SetNull)
+  @@unique([roomId,slotNumber])
+}
+model Category {
+  id String @id
+  label String
+  description String
+  entityKind String
+  validationMode String
+  difficulty String
+  enabled Boolean @default(true)
+  games GameCategory[]
+  answers Answer[]
+}
+model Alias {
+  id String @id @default(uuid()) @db.Uuid
+  entityKind String
+  alias String
+  canonicalKey String
+  @@unique([entityKind,alias])
+}
+model Game {
+  id String @id @db.Uuid
+  roomId String @db.Uuid
+  status String
+  configuredRoundCount Int
+  roundDurationSeconds Int
+  currentRound Int
+  room Room @relation(fields:[roomId],references:[id],onDelete:Cascade)
+  categories GameCategory[]
+  rounds Round[]
+  @@index([roomId])
+}
+model GameCategory {
+  gameId String @db.Uuid
+  categoryId String
+  order Int
+  game Game @relation(fields:[gameId],references:[id],onDelete:Cascade)
+  category Category @relation(fields:[categoryId],references:[id])
+  @@id([gameId,categoryId])
+  @@unique([gameId,order])
+}
+model Round {
+  id String @id @db.Uuid
+  gameId String @db.Uuid
+  number Int
+  pickerId String @db.Uuid
+  letter String?
+  status String
+  answeringStartsAt DateTime?
+  answeringEndsAt DateTime?
+  reviewEndsAt DateTime?
+  revision Int
+  game Game @relation(fields:[gameId],references:[id],onDelete:Cascade)
+  answers Answer[]
+  scores RoundScore[]
+  picker Participant @relation("Picker",fields:[pickerId],references:[id],onDelete:NoAction)
+  @@unique([gameId,number])
+}
+model Answer {
+  id String @id @db.Uuid
+  roundId String @db.Uuid
+  categoryId String
+  participantId String @db.Uuid
+  rawText String
+  normalizedText String
+  canonicalEntityId String?
+  version Int
+  draftUpdatedAt DateTime
+  status String
+  invalidReason String
+  round Round @relation(fields:[roundId],references:[id],onDelete:Cascade)
+  category Category @relation(fields:[categoryId],references:[id])
+  participant Participant @relation(fields:[participantId],references:[id],onDelete:Cascade)
+  votes AnswerVote[]
+  judgment AnswerJudgment?
+  @@unique([roundId,categoryId,participantId])
+}
+model AnswerVote {
+  answerId String @db.Uuid
+  voterParticipantId String @db.Uuid
+  verdict Boolean
+  reason String
+  updatedAt DateTime
+  answer Answer @relation(fields:[answerId],references:[id],onDelete:Cascade)
+  voter Participant @relation(fields:[voterParticipantId],references:[id],onDelete:Cascade)
+  @@id([answerId,voterParticipantId])
+}
+model AnswerJudgment {
+  answerId String @id @db.Uuid
+  verdict String
+  resolverId String? @db.Uuid
+  reason String
+  judgedAt DateTime
+  revision Int
+  answer Answer @relation(fields:[answerId],references:[id],onDelete:Cascade)
+  resolver Participant? @relation("Resolver",fields:[resolverId],references:[id],onDelete:SetNull)
+}
+model RoundScore {
+  roundId String @db.Uuid
+  participantId String @db.Uuid
+  score Int
+  uniqueCount Int
+  validCount Int
+  revision Int
+  round Round @relation(fields:[roundId],references:[id],onDelete:Cascade)
+  participant Participant @relation(fields:[participantId],references:[id],onDelete:Cascade)
+  @@id([roundId,participantId])
+}
+model AuditEvent {
+  id String @id @default(uuid()) @db.Uuid
+  roomId String @db.Uuid
+  actorId String? @db.Uuid
+  type String
+  payload Json
+  createdAt DateTime
+  revision Int
+  room Room @relation(fields:[roomId],references:[id],onDelete:Cascade)
+  actor Participant? @relation("Actor",fields:[actorId],references:[id],onDelete:SetNull)
+  @@unique([roomId,revision])
+}
+model Mutation {
+  roomId String @db.Uuid
+  guestId String @db.Uuid
+  mutationId String @db.Uuid
+  requestHash String
+  createdAt DateTime @default(now())
+  room Room @relation(fields:[roomId],references:[id],onDelete:Cascade)
+  guest GuestIdentity @relation(fields:[guestId],references:[id])
+  @@id([roomId,guestId,mutationId])
+}

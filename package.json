@@ -1,0 +1,48 @@
+{
+  "name": "basta-futbolero",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12",
+    "pnpm": ">=10"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @basta/shared build && concurrently -k \"pnpm --filter @basta/server dev\" \"pnpm --filter @basta/web dev\"",
+    "build": "pnpm --filter @basta/shared build && pnpm --filter @basta/server build && pnpm --filter @basta/web build",
+    "typecheck": "pnpm --filter @basta/shared build && pnpm -r typecheck",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "test": "pnpm --filter @basta/shared build && vitest run",
+    "test:integration": "pnpm --filter @basta/shared build && vitest run apps/server/src/tests/integration.test.ts",
+    "test:e2e": "playwright test",
+    "db:up": "docker compose up -d db",
+    "db:generate": "pnpm --filter @basta/server db:generate",
+    "db:migrate": "pnpm --filter @basta/server db:migrate",
+    "db:seed": "pnpm --filter @basta/shared build && pnpm --filter @basta/server db:seed",
+    "db:local": "tsx scripts/local-postgres.ts",
+    "test:core": "pnpm --filter @basta/shared build && node --import ./scripts/register-typescript.mjs --test --test-isolation=none tests/core.node.ts",
+    "check:source": "node scripts/check-source.mjs",
+    "test:unit": "pnpm --filter @basta/shared build && vitest run --exclude apps/server/src/tests/integration.test.ts",
+    "db:test:migrate": "node scripts/migrate-test-db.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.0",
+    "@playwright/test": "^1.56.0",
+    "@types/node": "^24.13.3",
+    "@types/supertest": "^6.0.3",
+    "concurrently": "^9.2.1",
+    "dotenv": "^17.2.3",
+    "eslint": "^9.39.0",
+    "eslint-plugin-vue": "^10.5.1",
+    "prettier": "^3.7.4",
+    "supertest": "^7.1.4",
+    "tsx": "^4.20.6",
+    "typescript": "~6.0.2",
+    "typescript-eslint": "^8.46.1",
+    "vitest": "^4.1.0",
+    "vue-eslint-parser": "^10.2.0"
+  },
+  "optionalDependencies": {
+    "embedded-postgres": "18.4.0-beta.17"
+  }
+}

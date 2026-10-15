@@ -1,0 +1,12 @@
+node_modules/
+**/dist/
+.env
+.env.example
+**/.env
+apps/server/src/generated/
+.local-postgres/
+test-results/
+playwright-report/
+*.log
+
+.pnpm-store/

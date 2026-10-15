@@ -1,0 +1,27 @@
+{
+  "name": "@basta/web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vue-tsc --noEmit && vite build",
+    "typecheck": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "@basta/shared": "workspace:*",
+    "vue": "^3.5.42",
+    "vue-router": "^4.6.3",
+    "pinia": "^3.0.3",
+    "gsap": "^3.13.0",
+    "socket.io-client": "^4.8.1",
+    "zod": "^4.1.12",
+    "@fontsource/barlow-condensed": "^5.2.6",
+    "@fontsource/inter": "^5.2.6"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.8",
+    "vite": "^8.3.0",
+    "vue-tsc": "^3.3.11",
+    "typescript": "~6.0.2"
+  }
+}

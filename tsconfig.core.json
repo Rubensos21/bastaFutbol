@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "types": ["node"],
+    "noEmit": true
+  },
+  "include": [
+    "tests/core.cases.ts",
+    "apps/server/src/draws/**/*.ts",
+    "apps/server/src/rounds/**/*.ts",
+    "apps/server/src/review/**/*.ts",
+    "apps/server/src/scoring/**/*.ts",
+    "apps/server/src/game/**/*.ts",
+    "apps/server/src/rooms/projection.ts"
+  ]
+}
