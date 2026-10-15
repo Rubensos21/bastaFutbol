@@ -10,3 +10,4 @@ playwright-report/
 *.log
 
 .pnpm-store/
+AGENTS.md
