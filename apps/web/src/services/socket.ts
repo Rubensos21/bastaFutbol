@@ -4,6 +4,7 @@ let socket: Socket | undefined;
 export function gameSocket() {
   return (socket ??= io(import.meta.env.VITE_SOCKET_URL || window.location.origin, {
     autoConnect: false,
+    transports: ['websocket'],
     withCredentials: true,
     reconnection: true,
     reconnectionDelay: 800,
