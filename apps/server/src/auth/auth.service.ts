@@ -51,6 +51,7 @@ export class AuthService {
       const guest = await this.authenticate(header);
       return { guest, cookie: null };
     } catch {
+      const production = process.env.NODE_ENV === 'production';
       const token = randomBytes(32).toString('hex');
       const expiresAt = new Date(Date.now() + 7 * 86400000);
       const guest = await this.db.guestIdentity.create({
@@ -58,7 +59,9 @@ export class AuthService {
       });
       return {
         guest,
-        cookie: `basta_session=${token}.${this.signature(token)}; HttpOnly; Path=/; SameSite=Lax; Max-Age=604800${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`,
+        cookie: `basta_session=${token}.${this.signature(token)}; HttpOnly; Path=/; SameSite=${
+          production ? 'None' : 'Lax'
+        }; Max-Age=604800${production ? '; Secure' : ''}`,
       };
     }
   }
