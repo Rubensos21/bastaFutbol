@@ -15,7 +15,6 @@
     "test": "pnpm --filter @basta/shared build && vitest run",
     "test:integration": "pnpm --filter @basta/shared build && vitest run apps/server/src/tests/integration.test.ts",
     "test:e2e": "playwright test",
-    "db:up": "docker compose up -d db",
     "db:generate": "pnpm --filter @basta/server db:generate",
     "db:migrate": "pnpm --filter @basta/server db:migrate",
     "db:seed": "pnpm --filter @basta/shared build && pnpm --filter @basta/server db:seed",

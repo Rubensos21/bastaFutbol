@@ -52,7 +52,7 @@ Mantener el stack solicitado en el cliente: **Vite + Vue 3 + TypeScript**, `<scr
 - **Opcional, no requerido para la primera versión:** Redis + adaptador Socket.IO y locks distribuidos si se escala a múltiples instancias. **No implementar múltiples réplicas sin estrategia para coherencia de estado, timers, deduplicación de eventos y pub/sub.** La versión inicial corre en una instancia de backend.
 - **Monorepo pnpm** si la estructura actual lo permite: paquetes del cliente, servidor y contratos compartidos. Si ya hay Vite creado, adaptar sin eliminar automáticamente archivos útiles.
 - **Tests:** Vitest para utilidades y cliente; Jest o Vitest compatible con NestJS para servidor; Supertest y clientes Socket.IO reales para integración; Playwright para E2E.
-- **Herramientas:** ESLint, Prettier, `pnpm` workspace, `.env.example`, scripts de migración/seed, Docker Compose para PostgreSQL, README claro.
+- **Herramientas:** ESLint, Prettier, `pnpm` workspace, `.env.example`, scripts de migración/seed, PostgreSQL local, README claro.
 - Versiones de paquetes: elegir versiones estables y compatibles disponibles al implementar. No copiar versiones antiguas sin verificar. Registrar versiones en lockfile.
 
 ### 2.1 Estructura esperada
@@ -64,7 +64,6 @@ basta-futbolero/
 ├── package.json
 ├── pnpm-workspace.yaml
 ├── pnpm-lock.yaml
-├── docker-compose.yml
 ├── .env.example
 ├── .gitignore
 ├── docs/
@@ -485,14 +484,14 @@ VITE_API_URL=http://localhost:3001
 VITE_SOCKET_URL=http://localhost:3001
 ```
 
-Separar claramente variables frontend y backend y proporcionar ejemplos adecuados a `apps/web/.env.example` y `apps/server/.env.example` cuando el monorepo lo requiera. Usar un secreto largo real en despliegue. Docker Compose debe levantar PostgreSQL local con volumen y healthcheck (y opcional servidor/web por perfiles, no obligatorio).
+Separar claramente variables frontend y backend y proporcionar ejemplos adecuados a `apps/web/.env.example` y `apps/server/.env.example` cuando el monorepo lo requiera. Usar un secreto largo real en despliegue. PostgreSQL debe ejecutarse como servicio local o mediante la alternativa embebida documentada en el README.
 
 Comandos esperados (adaptarlos al monorepo real):
 
 ```bash
 pnpm install
 cp .env.example .env          # o copiar .env.example por aplicación
-pnpm db:up                  # docker compose up -d db
+pnpm db:local               # PostgreSQL local embebido para desarrollo
 pnpm db:migrate             # prisma migrate dev/deploy según entorno
 pnpm db:seed                # catálogo de categorías + aliases esenciales
 pnpm dev                    # web y API concurrentes
@@ -545,7 +544,7 @@ Proveer `GET /health` en backend y explicación para probar dos navegadores / un
 ## 15. PLAN DE IMPLEMENTACIÓN PARA CODEX (ORDEN OBLIGATORIO)
 
 1. **Inspeccionar repo existente** y assets. No sobrescribir un proyecto ya armado sin revisar. Mostrar diagnóstico breve en la salida de Codex y plan en tareas.
-2. Configurar/ajustar monorepo pnpm con web Vite/Vue/TS, NestJS backend, shared types/contracts, herramientas y Docker Compose PostgreSQL.
+2. Configurar/ajustar monorepo pnpm con web Vite/Vue/TS, NestJS backend, shared types/contracts, herramientas y PostgreSQL local.
 3. Definir entidades Prisma, migraciones, seed del catálogo de categorías con IDs/definiciones, aliases iniciales, seguridad de sesiones de invitado.
 4. Implementar servicio de salas, código e invitación, registro 2–7, modos de capacidad y autorización. Verificar con tests de concurrencia.
 5. Implementar motor de juego/transiciones con rondas, roster cerrado y siete categorías por sala; store/snapshots con versiones.

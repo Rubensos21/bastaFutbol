@@ -6,7 +6,7 @@
 - `apps/server`: NestJS, gateway Socket.IO, autenticación, repositorio transaccional y servicios de salas, rondas, revisión y puntuación. El núcleo de reglas es TypeScript puro; Nest lo inyecta mediante factories para mantenerlo comprobable sin simular el framework.
 - `packages/shared`: contratos Zod estrictos, catálogo de 48 categorías, tipos, normalización, comparación y scoring puro. Se compila antes de consumirlo desde ambos lados.
 
-Se conservan los assets de referencia en `src/docs/references`. El frontend inicial se trasladó a `apps/web/src`. `src/styles` apunta a `apps/web/src/styles`: los tokens tienen una única fuente de verdad y conservan el acceso solicitado.
+Los assets de referencia se conservaron durante el análisis de diseño. El frontend vive en `apps/web/src`, donde `apps/web/src/styles` contiene la única fuente de verdad de los tokens.
 
 ```mermaid
 flowchart LR

@@ -42,7 +42,7 @@ Esta lista indica código implementado. No convierte las pruebas pendientes en r
 
 ## Entorno y bloqueos observados
 
-Node 25.9.0 y pnpm 12.11.2 estaban disponibles con la plantilla inicial de Vue/Vite. Docker y PostgreSQL no estaban instalados. Chrome sí está instalado, pero no fue posible servir el cliente completo.
+Node 25.9.0 y pnpm 12.11.2 estaban disponibles con la plantilla inicial de Vue/Vite. PostgreSQL no estaba instalado. Chrome sí está instalado, pero no fue posible servir el cliente completo.
 
 La consulta por shell al registro npm falló con `Could not resolve host: registry.npmjs.org`. Los intentos de instalación offline también fallaron con `ERR_PNPM_STORE_DIR_OPEN_OPERATION_LOCK: Read-only file system`. La caché no contiene Nest, Socket.IO, Pinia, Vue Router, adapter-pg, Vitest ni Playwright necesarios para terminar la instalación.
 

@@ -26,11 +26,11 @@ Terminé confirma y bloquea únicamente tu fila. No corta el tiempo de los demá
 
 Los borradores se guardan localmente y se sincronizan. Si existe conflicto entre dispositivos se muestran ambas versiones para decidir cuál reenviar mientras el plazo esté abierto. Un texto que no llegó antes del cierre no se acepta posteriormente por cambiar el reloj local.
 
-## Inicial, aliases y no repetir entidades
+## Inicial, alias y no repetir entidades
 
 La respuesta debe empezar por la letra sorteada. Se ignoran El, La, Los, Las y The al inicio bajo la política del juego. No se eliminan Real ni FC. En casos grises el grupo usa la revisión humana; un alias no excusa una inicial distinta.
 
-La comparación ignora mayúsculas, acentos, espacios repetidos y puntuación exterior. Para colisiones se equipara ñ/n; no se borran apellidos o prefijos interiores. No se fusionan automáticamente Ronaldo y Cristiano Ronaldo ni Xavi y Xabi. Aliases explícitos: Leo Messi/Lionel Messi, CR7/Cristiano Ronaldo, Barça/FC Barcelona, Real Madrid CF/Real Madrid, México/Selección de México.
+La comparación ignora mayúsculas, acentos, espacios repetidos y puntuación exterior. Para colisiones se equipara ñ/n; no se borran apellidos o prefijos interiores. No se fusionan automáticamente Ronaldo y Cristiano Ronaldo ni Xavi y Xabi. Alias explícitos: Leo Messi/Lionel Messi, CR7/Cristiano Ronaldo, Barça/FC Barcelona, Real Madrid CF/Real Madrid, México/Selección de México.
 
 Un mismo jugador no puede repetir una persona, club o selección en distintas categorías de su propia ronda. Prevalece la columna más a la izquierda; las posteriores valen 0. Jugador y Entrenador comparten identidad de persona; País de Mundial y Selección comparten identidad de selección nacional. La primera aparición no vacía reserva esa entidad aunque su pertenencia a esa categoría sea rechazada; esto mantiene la prioridad visual determinista. Las categorías anuladas no reservan entidades.
 

@@ -6,7 +6,7 @@ Juego privado de Basta/Stop futbolero para **2–7 personas**, desde navegadores
 
 ## Arranque local
 
-Necesitas Node 24 LTS, pnpm 10 o superior, acceso al registro npm y Docker Compose, o una instalación de PostgreSQL. No necesitas servicios de pago.
+Necesitas Node 24 LTS, pnpm 10 o superior, acceso al registro npm y PostgreSQL. Puedes usar PostgreSQL instalado localmente o la alternativa embebida del proyecto. No necesitas servicios de pago.
 
 ```bash
 pnpm install
@@ -14,7 +14,7 @@ cp apps/server/.env.example apps/server/.env
 cp apps/web/.env.example apps/web/.env
 # Edita SESSION_SECRET: mínimo 32 caracteres aleatorios.
 # Por ejemplo: node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
-pnpm db:up
+pnpm db:local
 pnpm db:generate
 pnpm db:migrate
 pnpm db:seed
@@ -23,9 +23,9 @@ pnpm dev
 
 Abre `http://localhost:5173`. La API escucha en `3001`; `GET /health` y `GET /api/health` verifican PostgreSQL. Vite reenvía `/api` y `/socket.io` a la API, por lo que la sesión funciona mediante cookie HttpOnly del mismo origen.
 
-La primera instalación completa debe generar y versionar el **nuevo `pnpm-lock.yaml`**. El lock de la plantilla original se conserva únicamente como `docs/scaffold-pnpm-lock.yaml`; no representa las dependencias nuevas. No uses `--frozen-lockfile` hasta completar esta instalación y revisar el lock generado.
+La primera instalación completa debe generar y versionar el **nuevo `pnpm-lock.yaml`**. No uses `--frozen-lockfile` hasta completar esta instalación y revisar el lock generado.
 
-Sin Docker, `pnpm db:local` ofrece PostgreSQL real mediante el paquete opcional `embedded-postgres`; requiere descargar sus binarios durante la instalación. Usa el directorio persistente `.local-postgres`. Esta alternativa no se ha ejecutado aquí. También puedes instalar PostgreSQL y crear el usuario `basta` y la base `basta_futbolero` con los valores de `.env.example`.
+`pnpm db:local` ofrece PostgreSQL real mediante el paquete opcional `embedded-postgres`; requiere descargar sus binarios durante la instalación. Usa el directorio persistente `.local-postgres`. Esta alternativa no se ha ejecutado aquí. También puedes instalar PostgreSQL y crear el usuario `basta` y la base `basta_futbolero` con los valores de `.env.example`.
 
 ## Probar dos navegadores y un teléfono
 
@@ -81,7 +81,7 @@ Para redes distintas necesitas publicar **web + API + PostgreSQL**, con HTTPS/WS
 2. Compila con `pnpm build`. Sirve `apps/web/dist` con fallback SPA a `index.html`.
 3. Arranca la API con `pnpm --filter @basta/server start`, `NODE_ENV=production` y las variables del servidor. `FRONTEND_ORIGIN` debe listar explícitamente orígenes HTTPS; `PUBLIC_APP_URL` debe ser la URL pública HTTPS.
 4. Usa un reverse proxy del mismo dominio para `/api` y `/socket.io` hacia Nest, habilitando Upgrade de WebSocket. La API agrega `Secure` a la cookie en producción. El frontend genera invitaciones con el origen real; el enlace nunca incluye tokens.
-5. No expongas PostgreSQL a Internet. Docker Compose enlaza el puerto de la BD exclusivamente a loopback.
+5. No expongas PostgreSQL a Internet; limita el acceso de la base de datos a la máquina o red privada del despliegue.
 
 Si separas frontend y API, configura `VITE_API_URL` y `VITE_SOCKET_URL` y mantén ambos bajo el mismo sitio para las cookies SameSite=Lax. Para dominios de sitios diferentes hará falta ajustar de forma deliberada las cookies y comprobar restricciones del navegador; el despliegue recomendado usa el mismo origen.
 

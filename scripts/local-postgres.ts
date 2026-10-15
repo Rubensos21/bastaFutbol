@@ -1,5 +1,5 @@
 import EmbeddedPostgres from 'embedded-postgres';
-// PostgreSQL real, instancia local opcional para equipos sin Docker. Los binarios se descargan al instalar.
+// PostgreSQL real en una instancia local opcional. Los binarios se descargan al instalar.
 const pg = new EmbeddedPostgres({
   databaseDir: '.local-postgres',
   user: 'basta',
